@@ -191,8 +191,6 @@ for(i in 1:nrow(NBA1415)){
     print(NBA1415[i,c("Name","Team","Position")])
    }
 }
-  
-
 
 
 #39
@@ -272,3 +270,6 @@ x[! complete.cases(x)]
 
 
 ##test 2
+
+
+
