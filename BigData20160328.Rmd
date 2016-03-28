@@ -1,0 +1,705 @@
+---
+title: "大數據分析方法"
+author: "曾意儒 Yi-Ju Tseng, 長庚大學資管系"
+date: "March 28, 2016"
+output: ioslides_presentation
+subtitle: 資料讀取與處理
+highlighter: highlight.js
+---
+
+## 講課速度
+- 在課堂上反應聽不懂的部分
+- 留言反應：交作業的時候，或至[意見回饋區](http://goo.gl/forms/YauEmm8g4b)，會在下次上課用新的範例講解
+- 有很多重要的功能會在分析新資料時重複用到
+
+## 作業問題
+閱讀錯誤訊息
+```
+# Error: could not find function "fetch_NBAPlayerStatistics"
+# 找不到"fetch_NBAPlayerStatistics" function
+# 原因：沒安裝或沒讀入SportsAnalytics package
+```
+```
+# Error in library(knitr): there is no package called 'knitr'
+# 找不到"knitr" package
+# 原因：沒安裝knitr package
+```
+- Windows編碼：在GitHub上顯示是正確的話，就複製貼上.....
+- [R Markdown小抄](http://www.rstudio.com/wp-content/uploads/2016/03/rmarkdown-cheatsheet-2.0.pdf)
+
+
+## 作業範例裡的merge()-1
+- By default the data frames are merged on the columns with names they both have
+- For example: **Team**, **TotalPoints**
+- Use **by**, **by.x**, **by.y** to assign the matching column
+- Inner join
+- Use **all**, **all.x**, **all.y** to implement outer (all/left/right) join
+- ?merge
+- merge(x, y, by=)
+
+## 作業範例裡的merge()-2
+```{r}
+df1 = data.frame(CustomerId = c(1:4), 
+                 Product = c(rep("Toaster", 2), rep("Radio", 2)))
+df2 = data.frame(CustomerId = c(2,4), State = c("Alabama","Ohio"))
+df1
+df2
+```
+
+## 作業範例裡的merge()-3
+```{r}
+merge(x = df1, y = df2, by = "CustomerId")
+merge(x = df1, y = df2, by = "CustomerId", all = TRUE)
+```
+
+## 作業範例裡的merge()-4
+```{r}
+merge(x = df1, y = df2, by = "CustomerId", all.x = TRUE)
+merge(x = df1, y = df2, by = "CustomerId", all.y = TRUE)
+```
+
+## 作業範例裡的Bug
+誰投三分球會百發百中啊......
+```{r results='hide',message=FALSE}
+if (!require('SportsAnalytics')){
+    install.packages("SportsAnalytics")
+    library(SportsAnalytics)
+}
+```
+```{r}
+NBA1415<-fetch_NBAPlayerStatistics("14-15")
+NBA1415$ThreesP<-
+    round(NBA1415$ThreesMade/NBA1415$ThreesAttempted,digits=3)
+ThreesPMax<-merge(NBA1415,aggregate(ThreesP~Team,NBA1415,max))
+ThreesPMax[order(ThreesPMax$ThreesP,decreasing=T),
+           c("Team","Name","Position","ThreesP","ThreesMade")]
+```
+
+## 別掉入％陷阱
+做Final Project的時候，別寫`中鋒投三分全世界最準`的這種結論.....
+```{r}
+ThreesPMaxNew<-merge(NBA1415,
+                     aggregate(ThreesP~Team,
+                               NBA1415[NBA1415$ThreesMade>mean(NBA1415$ThreesMade),],
+                               max))
+ThreesPMaxNew[order(ThreesPMaxNew$ThreesP,decreasing=T),
+              c("Team","Name","Position","ThreesP","ThreesMade")]
+```
+
+##NBA Data Analysis
+http://toddwschneider.com/posts/ballr-interactive-nba-shot-charts-with-r-and-shiny/
+<img src="Fig/SC13.png" width="700px">
+
+##NBA Data Analysis
+<img src="Fig/SC14.png" width="700px">
+
+##NBA Data Analysis
+<img src="Fig/SC15.png" width="700px">
+[Sports Data in R](http://blog.ouseful.info/2015/07/08/sports-data-and-r-scope-for-a-thematic-rather-than-task-view-living-post/)
+
+##Open Data Analysis
+- g0v社群介面：http://g0vairmap.3203.info/map.html
+- LASS社群： https://goo.gl/NUXItW
+
+<img src="Fig/AirBox1.png" width="800px">
+
+##Open Data Analysis
+- 開放資料下載欄位：http://goo.gl/xFZPl9
+
+<img src="Fig/AirBox2.png" width="800px">
+
+##Open Data Analysis
+- 華碩空氣盒子介面：http://pm2.5.taipei
+
+<img src="Fig/AirBox3.png" width="800px">
+
+## apply家族- 把函數功能當成參數
+- apply的第一個參數會直接帶入函數的第一個參數，`mat1`會帶入函數的參數`x`
+- 對第一個參數，會逐個計算(For)。若是Data Frame，會逐列(Column)作計算
+```{r}
+mat1 <- data.frame(1:4,5:8,9:12,13:16) #4個Columns，執行4次
+mat1
+sapply(mat1, function(x, y) {sum(x) + y}, y = 5) #mrt1是x,y在後面
+```
+
+## apply家族- 把函數功能當成參數
+- apply的第一個參數會直接帶入函數的第一個參數
+- 對第一個參數，會逐個計算(For)1算1次2算1次3算1次
+- 若是向量，就逐個帶入
+- 範例：`1:3`會帶入函數的參數`a`
+```{r}
+lapply(1:3, function(a, b) {a*b}, b=2) #3個數字的向量，執行3次
+```
+
+
+## 用lapply處理List
+- 範例：`1:6`會帶入函數的參數`i`，length(list2)=5
+```{r}
+list1<-list(1,1:2,1:3,1:4,1:5); list2<-list(2,2:3,2:4,2:5,2:6)
+lapply(1:length(list2), function(i, x, y) {x[[i]] + y[[i]]},
+       x = list1, y = list2) #5個數字的向量，執行5次
+```
+
+## SHA 版本碼
+<img src="Fig/SHA.png" width="800px">
+
+## Repo URL
+https://github.com/yijutseng/BigDataCGUIM
+
+<img src="Fig/RepoURL.png" width="800px">
+
+## .md, .R... URL
+https://github.com/yijutseng/BigDataCGUIM
+<img src="Fig/FileURL.png" width="600px">
+
+##每次開始前
+- 打開GitHub桌面版
+- 打GitHub帳密與Git config資料
+- **Clone**上次交的作業回本機端(存到桌面)
+    - 提示：左上角的+號，選**Clone**
+- 點兩下*Clone回來的資料夾*裡面的**.Rproj**
+- 下載[今天要用的R Code](https://github.com/yijutseng/BigDataCGUIM/blob/master/BigData20160328.Rmd)
+
+#Reading Data -2 
+
+## JSON (**J**ava**s**cript **O**bject **N**otation)
+- 輕量級的資料交換語言 [Wiki](http://en.wikipedia.org/wiki/JSON)
+- Data from **a**pplication **p**rogramming **i**nterfaces (APIs)
+- JavaScript、Java、Node.js應用
+- 一些NoSQL非關係型資料庫也用JSON儲存格資料：**MongoDB**
+- Data stored as
+    - Numbers (double)
+    - Strings (double quoted)
+    - Boolean (_true_ or _false_)
+    - Array (ordered, comma separated enclosed in square brackets _[]_)
+    - Object (unorderd, comma separated collection of **key:value** pairs in curley brackets _{}_)
+
+
+## Example JSON file
+https://api.github.com/users/yijutseng/repos
+<img src="Fig/JSON.png" width="800px">
+
+## Example JSON file from API
+- [臺北市水質監測資訊API](http://data.taipei/opendata/datalist/apiAccess?scope=resourceAquire&rid=190796c8-7c56-42e0-8068-39242b8ec927)
+- http://data.taipei/opendata/datalist/apiAccess?scope=resourceAquire&**rid=190796c8-7c56-42e0-8068-39242b8ec927**
+
+<img src="Fig/WaterAPI.png" width="600px">
+
+## Example JSON file from API
+[臺北市水質監測資訊API](http://data.taipei/opendata/datalist/apiAccess?scope=resourceAquire&rid=190796c8-7c56-42e0-8068-39242b8ec927)
+<img src="Fig/JSON1.png" width="800px">
+
+## Reading data from JSON {jsonlite package}
+
+```{r results='hide',message=FALSE,warning=FALSE}
+if (!require('jsonlite')){
+    install.packages("jsonlite")
+    library(jsonlite)
+}
+if (!require('RCurl')){
+    install.packages("RCurl")
+    library(RCurl)
+}
+```
+
+```{r readJSON}
+WaterData<-fromJSON(getURL("http://data.taipei/opendata/datalist/apiAccess?scope=resourceAquire&rid=190796c8-7c56-42e0-8068-39242b8ec927"))
+names(WaterData)
+```
+
+
+
+## Nested objects in JSON
+```{r}
+names(WaterData$result)
+WaterData$result$
+WaterDataFrame<-WaterData$result$results
+WaterDataFrame$longitude<-as.numeric(WaterDataFrame$longitude)
+WaterDataFrame$latitude<-as.numeric(WaterDataFrame$latitude)
+WaterDataFrame$qua_cntu<-as.numeric(WaterDataFrame$qua_cntu)
+WaterDataFrame
+```
+fomjason是把jason轉乘list tojason把lis變成jason
+
+
+## Data Frame -> JSON
+```{r writeJSON}
+myjson <- toJSON(iris, pretty=TRUE)
+cat(myjson)
+```
+
+[http://www.r-bloggers.com/new-package-jsonlite-a-smarter-json-encoderdecoder/](http://www.r-bloggers.com/new-package-jsonlite-a-smarter-json-encoderdecoder/)
+
+
+
+## JSON -> Data Frame
+```{r}
+iris2 <- fromJSON(myjson)
+head(iris2)
+```
+
+
+[http://www.r-bloggers.com/new-package-jsonlite-a-smarter-json-encoderdecoder/](http://www.r-bloggers.com/new-package-jsonlite-a-smarter-json-encoderdecoder/)
+
+
+## Application programming interfaces (API)
+- 應用程式介面 [Wiki](https://zh.wikipedia.org/zh-tw/%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E6%8E%A5%E5%8F%A3) 
+- Web API
+<img src="http://www.websequencediagrams.com/cgi-bin/cdraw?lz=dGl0bGUgQXV0aGVudGljYXRlZCByZXF1ZXN0CgpVc2VyLT5IdWI6IFBPU1QgL2RlYWwvY291cG9uICsgT0F1dGggVG9rZW4KSHViLT5Gb3J1bTogdmFsaWRhdGUgdAAWBQARBQBABwANBSBWYWxpZAAmDQBOEQApDVN1Y2Nlc3MAXwZVc2VyAAoJ&s=napkin" width="700px">
+
+
+##Facebook
+<img src="Fig/Data.png" width="600px">
+<img src="Fig/SN.png" width="600px">
+
+## Add A New App
+https://developers.facebook.com/
+<img src="Fig/Facebook1.png" width="800px">
+
+
+## Select A Platform
+
+<img src="Fig/Facebook2.png" width="800px">
+
+
+## Setup Your App
+
+<img src="Fig/Facebook3.png" width="800px">
+
+## Check Detail Info of You App
+
+<img src="Fig/Facebook4.png" width="800px">
+
+## Facebook Graph API Explorer
+
+<img src="Fig/Facebook5.png" width="800px">
+
+## Facebook Graph API Explorer
+
+<img src="Fig/Facebook6.png" width="800px">
+
+## Select Your App
+
+<img src="Fig/Facebook7.png" width="800px">
+
+## The First Try
+
+<img src="Fig/Facebook8.png" width="800px">
+
+## !?!
+
+<img src="Fig/Facebook9.png" width="800px">
+
+## You Need to Setup Access Tokens
+
+<img src="Fig/Facebook10.png" width="800px">
+
+## Looking Good!
+
+<img src="Fig/Facebook11.png" width="800px">
+
+## Select Some Columns/Fields
+
+<img src="Fig/Facebook12.png" width="800px">
+
+##  The Access Token Has Expiration Time
+
+<img src="Fig/Facebook13.png" width="800px">
+
+##  Get the URL Can Be Used in R
+Get Code
+
+<img src="Fig/Facebook14.png" width="600px">
+
+##  cURL
+
+<img src="Fig/Facebook15.png" width="800px">
+
+## Graph API in R
+```{r results='hide',message=FALSE, warning=FALSE}
+if (!require('httr')){
+    install.packages("httr")
+    library(httr)
+}
+```
+```{r eval=FALSE}
+#put your token
+token<-"CAACEdEose0cBAOW9QjjEMGHGp54JEGytGz9tPRltLiHRGJsHae0dSEHxlVmogqJ4hd8EoUQvB3yvDWFDpnHX8dfA2AIgelMfXQ7jZCrQbeaTEIWfjZCWoVZCzZB3cqrq8HFwr73qD1eaiNZAZCmFq0iZCi6kWFHn6Dh8gPFkRLMqvLhl17CuvbpixEO6k0ZBr1FcXq9L9pmFvL3JeX1ZCIBg8" #put your token
+FBData = GET(
+    paste0("https://graph.facebook.com/v2.5/tsaiingwen?fields=
+           posts{message,likes.summary(true)}&access_token=",
+           token))
+names(FBData)
+```
+
+```
+##  [1] "url"         "status_code" "headers"     "all_headers" "cookies"    
+##  [6] "content"     "date"        "times"       "request"     "handle"
+```
+
+## Graph API in R
+
+```{r eval=FALSE}
+json1 = content(FBData)
+names(json1)
+```
+```
+## [1] "posts" "id"
+```
+```{r eval=FALSE}
+names(json1$posts)
+```
+```
+## [1] "data"   "paging"
+```
+```{r eval=FALSE}
+json2 = jsonlite::fromJSON(toJSON(json1$posts$data))
+names(json2)
+```
+```
+## [1] "message" "id"      "likes"
+```
+
+## Graph API in R
+
+```{r eval=FALSE}
+json2$message[[1]]
+```
+```
+## [1] "再多雨，總有放晴的一天。\n\n圖片版權：\n
+## kuoyoung@flickr (https://goo.gl/UPIZ5r)\n
+## CC BY-NC-ND 2.0 (https://goo.gl/cefU8)"
+```
+```{r eval=FALSE}
+json2$likes$summary$total_count[[1]]
+```
+```
+## [1] 19362
+```
+
+## Rfacebook Package
+當然有別人寫好的Package! https://github.com/pablobarbera/Rfacebook
+```{r results='hide',message=FALSE, warning=FALSE}
+if (!require('Rfacebook')){
+    install.packages("Rfacebook")
+    library(Rfacebook)
+}
+```
+<img src="Fig/Rfacebook.png" width="800px">
+
+## Use Rfacebook To Get Info from A Page
+```{r eval=FALSE}
+getPage("tsaiingwen", token,n = 30)
+```
+<img src="Fig/RfacebookExample.png" width="800px">
+
+## How To Get More Data?
+Use **since** and **until**
+
+Set the dates vector
+```{r eval=FALSE}
+totalPage<-NULL 
+lastDate<-Sys.Date() #現在是哪一天
+numberOfPost<-30
+DateVector<-
+  seq(as.Date("2016-01-01"),lastDate,by="5 days") 
+DateVectorStr<-as.character(DateVector) #函數值只認得字串
+DateVectorStr
+```
+```
+## "2016-01-01" "2016-01-06" "2016-01-11" "2016-01-16" "2016-01-21" "2016-01-26" 
+## "2016-01-31" "2016-02-05" "2016-02-10" "2016-02-15" "2016-02-20" "2016-02-25" 
+## "2016-03-01" "2016-03-06" "2016-03-11" "2016-03-16" "2016-03-21"
+```
+
+## HoGew To t More Data?
+Use **since** and **until**
+```{r eval=FALSE}
+token<-'CAACEdEose0cBACyg7ASSfiGMq25MW6ZCxMqeVXlt01AtPjAY9kyZChDjdh4LIMjR0hNg8f4r0R6smYNwBn6cmuGylBt54Anbfh3E5NmZCf0dGLsaiquHfUM3BbKMO8JiC37Mhvq7exvZCJsLKioFzlwHhZC4cZBll17QZA2tapGeSNf6ZAp3OO0W5ZAJCQ5BZAKlq2HHuCxyaZClCK6fZCdD3M1ZA' #'放YOURTOKEN'
+for(i in 1:(length(DateVectorStr)-1)){
+    tempPage<-getPage("tsaiingwen", token,
+                      since = DateVectorStr[i],until = DateVectorStr[i+1])
+    totalPage<-rbind(totalPage,tempPage)
+}
+nrow(totalPage)
+```
+```
+## [1] 187
+```
+
+##Homework 4
+- 學號尾數1,2,3,4：`蔡英文` / 5,6,7：`朱立倫` / 8,9,0：`柯文哲`
+- 分析區間：2016/01/01到做作業的那一天
+- 分析內容：
+    - 每日發文數、likes數、Comments數、Shares數，並分析討論高低起伏原因（平日假日？特殊日子？特殊事件？）
+    - 提示：處理時間字串、用aggregate算每日發文數(FUN=length),likes平均數(FUN=mean)
+    - Comments的人在區間內的留言頻率（留言數/發文數，`加分題`）
+    - 加分題提示：getPost(post_id,token,n.comments = xxx)
+
+##Homework 4 提示程式碼
+
+```{r eval=FALSE}
+#日期處理
+totalPage$datetime <- as.POSIXct(totalPage$created_time, 
+                                 format = "%Y-%m-%dT%H:%M:%S+0000", 
+                                 tz = "GMT") #2016-01-16T15:05:36+0000
+totalPage$dateTPE <- format(totalPage$datetime, "%Y-%m-%d", 
+                            tz = "Asia/Taipei") #2016-01-16
+totalPage$weekdays <-weekdays(as.Date(totalPage$dateTPE))
+```
+
+
+```{r eval=FALSE}
+#計算likes, comments, shares
+aggregate(要算平均的欄位名稱~date,totalPage,mean)
+```
+
+
+```{r eval=FALSE}
+#加分題
+post_id<-totalPage$id #post_id
+getPost(post_id,token,n.comments = xxx)
+```
+    
+##Homework 4 詳細配分
+- 標題：Facebook粉絲團分析（分析專頁名稱ＯＯＯ）(`2 pt`)
+- 程式説明，要讓路人看懂，請務必說明分析區間（範例：2016/01/01至xx/xx貼文分析）(`5 pt`)
+- 次標題：讀取ＯＯＯ粉絲團資料
+- 資料讀取程式碼(`7 pt`)
+- 次標題：每日發文數分析(`2 pt`) 
+- 程式碼(`5 pt`)、結果(`5 pt`)、討論(`5 pt`)
+- 次標題：每日likes數、Comments數、shares數分析(各一個標題`2 pt`*3)
+- 程式碼(`7 pt`)、結果(`7 pt`)、討論(`7 pt`)（likes, comments, shares分開寫）
+- 次標題：粉絲留言頻率（加分題）
+- 程式碼、結果、討論（加分題）
+
+## Homework 4 作業繳交
+http://goo.gl/forms/1lgqWKG02O
+<img src="Fig/HW4.png" width="600px">
+
+## Homework 4 作業範例
+https://github.com/yijutseng/BigDataCGUIM/blob/master/HW4.Rmd
+
+## Other Useful Methods in Rfacebook Packages
+- getUser()
+- getPost()
+- getLikes()
+- Check https://github.com/pablobarbera/Rfacebook
+- ?Rfacebook
+
+
+## XML 可延伸標記式語言
+- E**x**tensible **m**arkup **l**anguage
+- 描述**結構化**資料的語言
+- 處理XML檔案是網頁**Html**爬蟲的基礎
+- Components
+    - Markup 標記 - labels that give the text structure
+    - Content 內文 - the actual text of the document
+- [XML Wiki](https://zh.wikipedia.org/wiki/XML)
+<img src="Fig/XML.png" width="800px">
+
+## Tags, elements and attributes
+
+- Tags correspond to general labels
+    - Start tags `<breakfast_menu>`, `<price>`
+    - End tags `</price>`
+    - Empty tags `<line-break />`
+- Elements are specific examples of tags
+    - `<name>Belgian Waffles</name>`
+- Attributes are components of the label
+    - `<book category="web">`
+
+<img src="Fig/XML.png" width="800px">
+
+
+## 讀 XML 檔案
+```{r results='hide',message=FALSE, warning=FALSE}
+if (!require('XML')){
+    install.packages("XML")
+    library(XML)
+}
+```
+```{r}
+fileUrl <- "http://www.w3schools.com/xml/simple.xml"
+doc <- xmlTreeParse(fileUrl,useInternal=TRUE)
+rootNode <- xmlRoot(doc)
+xmlName(rootNode)
+names(rootNode)
+rootNode
+```
+
+
+## 直接指定要哪部分的資料
+```{r explore}
+rootNode[[1]]
+rootNode[[1]][[1]]
+```
+
+## 針對某個tag取值
+```{r explore4}
+xpathSApply(rootNode,"//name",xmlValue)#取得所有"name"標籤內的資料
+xpathSApply(rootNode,"//price",xmlValue)#取得所有"price"標籤內的資料
+```
+
+## XML讀取範例-臺北市水質監測資訊
+[臺北市水質監測資訊](http://data.taipei/opendata/datalist/datasetMeta;jsessionid=4609F28BB99D9B64A73753ADE5B7CD88?oid=961ca397-4a59-45e8-b312-697f26b059dc)
+<img src="Fig/waterQ.png" width="800px">
+
+## XML讀取範例-臺北市水質監測資訊
+```{r}
+waterQ <- xmlTreeParse("waterQuality.xml",useInternal=TRUE)
+rootNode <- xmlRoot(waterQ)
+rootNode
+```
+
+## XML讀取範例-臺北市水質監測資訊
+```{r}
+#取得所有"code_name"標籤內的資料
+xpathSApply(rootNode,"//code_name",xmlValue)
+```
+
+## XML讀取範例-臺北市水質監測資訊
+```{r}
+#取得各監測站的經度
+xpathSApply(rootNode,"//longitude",xmlValue)
+```
+
+
+## XML讀取範例-臺北市水質監測資訊
+<img src="http://3.bp.blogspot.com/-Zx9V-kaVIE8/VZH7i8GTNQI/AAAAAAAAdQk/REJoLUxf7II/s640/Screenshot%2B2015-06-29%2B22.00.22.png" width="800px">
+
+## 網頁爬蟲 Webscraping, Crawling
+
+__Webscraping__: Programatically extracting data from the HTML code of websites. 
+
+- 不是每個網站都提供API
+    - 但網頁上卻有你想要分析的資料（像是ptt推文！？）
+    - 除了人工複製貼上以外，也可以將網頁處理程式化
+- 可能違法.....，一次讀太多太快，很可能被鎖IP
+- [Webscraping Wiki](http://en.wikipedia.org/wiki/Web_scraping)
+- [什麼是網頁爬蟲](http://www.largitdata.com/course/1/)
+
+## What’s the difference between scraping and crawling
+- `Crawling` 
+    - dealing with `large data-sets` where you develop your own crawlers which crawl to the deepest of the `web pages`. 
+- `Data scraping` 
+    - retrieving information from `any source (not necessarily the web)`. 
+    - It’s more often the case that irrespective of the approaches involved.
+
+
+
+## 爬蟲範例
+
+[長庚資管系](http://im.cgu.edu.tw/bin/home.php)
+<img src="Fig/html.png" width="800px">
+
+
+## 直接逐行讀取 readLines()
+
+```{r}
+con = url("http://im.cgu.edu.tw/bin/home.php")
+htmlCode = readLines(con)
+close(con)
+htmlCode
+```
+
+
+
+## 用XML工具讀取網頁 (XML package)
+
+```{r xml }
+url <- "http://im.cgu.edu.tw/bin/home.php"
+html <- htmlTreeParse(url, useInternalNodes=T)
+xpathSApply(html, "//title", xmlValue)
+xpathSApply(html, "//span[@class='ptname ']", xmlValue)
+```
+
+
+
+## GET from the httr package
+
+```{r httr}
+html2 = GET(url)
+content2 = content(html2,as="text")
+parsedHtml = htmlParse(content2,asText=TRUE)
+xpathSApply(parsedHtml, "//span[@class='ptname ']", xmlValue)
+```
+
+
+## 讀取需要帳號密碼的網頁-一定要httr
+
+```{r}
+pg2 = GET("http://httpbin.org/basic-auth/user/passwd",
+    authenticate("user","passwd"))
+pg2
+names(pg2)
+```
+
+
+## 參考資源
+
+- R Bloggers 有很多[爬蟲範例](http://www.r-bloggers.com/?s=Web+Scraping)（英文）
+- [Ptt爬蟲實作](http://bryannotes.blogspot.tw/2014/08/r-ptt-wantedsocial-network-analysis.html) 
+- [大數學堂 網頁爬蟲課程](http://www.largitdata.com/course_list/1)
+
+##Other Data
+- MySQL `RMySQL`
+- HDF5 `rhdf5`
+- Weka `foreign`
+- Stata `foreign`
+- SPSS `Hmisc`
+- SAS `Hmisc`
+- GIS `rgdal`
+- Images `jpeg`
+- Music `tuneR`
+
+
+# Data Manipulation
+
+## Start with reshaping
+[http://www.statmethods.net/management/reshape.html](http://www.statmethods.net/management/reshape.html)
+```{r results='hide',message=FALSE, warning=FALSE}
+if (!require('reshape2')){
+    install.packages("reshape2")
+    library(reshape2)
+}
+```
+```{r reshape2}
+head(mtcars)
+```
+
+
+## Melting data frames
+[http://www.statmethods.net/management/reshape.html](http://www.statmethods.net/management/reshape.html)
+
+```{r mtcars}
+mtcars$carname <- rownames(mtcars)
+carMelt <- melt(mtcars,id=c("carname","gear","cyl"),
+                measure.vars=c("mpg","hp"))
+head(carMelt,n=3)
+tail(carMelt,n=3)
+```
+
+## Casting data frames -1
+[http://www.statmethods.net/management/reshape.html](http://www.statmethods.net/management/reshape.html)
+
+```{r }
+cylData <- dcast(carMelt, cyl ~ variable)
+cylData
+```
+
+## Casting data frames -2
+[http://www.statmethods.net/management/reshape.html](http://www.statmethods.net/management/reshape.html)
+
+```{r }
+cylData <- dcast(carMelt, cyl ~ variable,mean)
+cylData
+```
+
+
+
+## More information
+- `reshape` [教學](http://www.slideshare.net/jeffreybreen/reshaping-data-in-r)
+- `data.table` [教學](https://www.datacamp.com/community/tutorials/data-table-r-tutorial)
+
+
