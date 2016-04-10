@@ -5,7 +5,7 @@ output: github_document
 
 分析政治人物朱立倫，資料分析區間為2016/01/01至2016/04/10
 
-## 讀取朱立倫粉絲團資料
+## 讀取朱立倫粉絲團資料 
 ```{r results='hide',message=FALSE, warning=FALSE}
 if (!require('Rfacebook')){
     install.packages("Rfacebook")
