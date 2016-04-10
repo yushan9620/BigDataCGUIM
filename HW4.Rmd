@@ -1,13 +1,11 @@
 ---
-title: "Facebook粉絲團分析（分析專頁：Cherng）"
+title: "Facebook粉絲團分析（分析專頁：朱立倫）"
 output: github_document
 ---
 
-程式説明在這裡～～～
-範例：分析百萬粉絲紅人來膜XXXOOOXXXOO，資料分析區間為2016/01/01至
-2016/03/28XXXOOOOO
+分析政治人物朱立倫，資料分析區間為2016/01/01至2016/04/10
 
-## 讀取Cherng粉絲團資料
+## 讀取朱立倫粉絲團資料
 ```{r results='hide',message=FALSE, warning=FALSE}
 if (!require('Rfacebook')){
     install.packages("Rfacebook")
@@ -15,43 +13,86 @@ if (!require('Rfacebook')){
 }
 ```
 ```{r}
-token<-'CAACEdEose0cBAGxkpPvhjqW0GP9E7StzT9OKJbI2Q2xG06rvW8p11cxjl3ZBihtWYxgMexf0lRME37INEp6PhzWy1lu4gnuQ0a0POOh74ihdADyVuG3cpk0niGgeSH8z9XB7Ms6KGGZC8kRWY1SWaIvEcXG3Ee85on5bdZAW9ZCNO71ZAZBO20P7B1WLpBsCn3KqG5Smt3tDMtNpGrx8tP'
-totalPage<-NULL
+token <- "CAAL8BwBDYJQBAEFZCFhgvZBzBKHrlkiwgioAg38tRPeeJdjDXowxPdVHXUOsMz32ddLn09Lg7c9HxjYZADFLIsbr0T4ozZA0zyBEhLAoAcPJey0MiAXFvWuPoUN5ddfKCuXTNery7sOuOrKVpYXKaalXBaTpbaZAFHTvQ3RjLhUDVjX3AucZAXqsKG3ti4SF56Xri7oVlRRECIAZBKIMtNicPQdOxP4KGMZD"
+totalPage<-NULL 
 lastDate<-Sys.Date()
-DateVectorStr<-as.character(seq(as.Date("2016-01-01"),lastDate,by="5 days"))
+DateVector<-seq(as.Date("2016-01-01"),lastDate,by="5 days")
+DateVectorStr<-as.character(DateVector)
 for(i in 1:(length(DateVectorStr)-1)){
-    tempPage<-getPage("cherngs.y", token,
-                      since = DateVectorStr[i],until = DateVectorStr[i+1])
+    tempPage<-getPage("llchu", token,since = DateVectorStr[i], until = DateVectorStr[i+1])
     totalPage<-rbind(totalPage,tempPage)
 }
 nrow(totalPage)
-```
 
-2016/01/01至2016/03/28Cherng粉絲團一共有50篇文章
+```
+2016/01/01至2016/04/10 朱立倫粉絲團一共有134篇文章
+
 
 ## 每日發文數分析
-
-說明說明～～～
-
-範例：分析Cherng粉絲團每天的發文數，由於日期格式OOXOXX，
-先將其轉換為台灣時區...xxxooo
+分析朱立倫粉絲團每天的發文數
 ```{r}
-totalPage$datetime <- as.POSIXct(totalPage$created_time, 
-                                 format = "%Y-%m-%dT%H:%M:%S+0000", 
-                                 tz = "GMT") #2016-01-16T15:05:36+0000
-totalPage$dateTPE <- format(totalPage$datetime, "%Y-%m-%d", 
-                            tz = "Asia/Taipei") #2016-01-16
+totalPage$datetime <- as.POSIXct(totalPage$created_time, format = "%Y-%m-%dT%H:%M:%S+0000", tz = "GMT") 
+totalPage$dateTPE <- format(totalPage$datetime, "%Y-%m-%d", tz = "Asia/Taipei") 
 totalPage$weekdays <-weekdays(as.Date(totalPage$dateTPE))
-PostCount<-aggregate(id~dateTPE,totalPage,length)
+
+PostCount<-aggregate(id~weekdays+dateTPE,totalPage,length)
 library(knitr)
 kable(head(PostCount[order(PostCount$id,decreasing = T),]))
 ```
 
-討論討論～～～～2016/01/23（週六）的發文數最多，一共有三篇，ooooxxx，
-2016/01/01和2016/01/14居次，01/14是來膜子發行日oooxxx
+2016/01/12（星期二）的發文數最多，一共有七篇。其中有四篇影片及三篇照片文，主要在討論【台灣最美的風景】、【一『旗』去投票】，【共同守護家園】、【台灣的良善和美好】，在選舉的倒數時間，以一些感人與希望的影片作為宣傳與拉票，維持形象。
+而接連著2016/01/13至2016/01/15，也各發了五篇文，皆為選舉前宣傳活動，以及提醒大家記得去投票。
+
 
 ## 每日likes數分析
-test<-getPost("id",token)
+分析朱立倫粉絲團每天的likes數
+```{r}
+LikesCount<-aggregate(likes_count~dateTPE,totalPage,mean)
+library(knitr)
+kable(LikesCount, digits=2)
+```
+
+從2016/01/01至選舉後十天左右的每日likes數較多，其中likes數最多的日期為01/16，為選舉當天，也是朱立倫敗選的日子，他PO了一長篇反省文得到了83386個likes；其次是01/09，有關政見發表會，得到了52729個likes。
+選舉結束後，朱立倫返回新北市市長職位，likes逐漸下降。
+直到02/06，likes數再次往上增長，是有關「南台大地震，新北市派出特搜隊前往台南協助救援，並在農暦年除夕夜前夕，希望大家平安。」的po文，得到了57639個likes數。
+而在台南地震災情後至04/10，likes數又大幅降低，大約為4000~10000個likes數。
+
+```{r}
+kable(head(LikesCount[order(LikesCount$likes_count,decreasing = T),]))
+```
+
+以上是最多likes數排行
+
+
 ## 每日comments數分析
+分析朱立倫粉絲團每天的comments次數
+```{r}
+CommentsCount<-aggregate(comments_count~dateTPE,totalPage,mean)
+library(knitr)
+kable(CommentsCount, digits=2)
+```
+
+從2016/01/01至選舉前後的每日comments數較多，其中01/16的敗選文得到了最多comments數，10605。而選舉風波後的comments數，逐漸降低至200-400，直到了02/06台南大地震災情，升至1377個comments。而後至04/10的comments數再次降低，約為100-300。
+
+```{r}
+kable(head(CommentsCount[order(CommentsCount$comments_count,decreasing = T),]))
+```
+
+以上是最多comments數排行
+
 
 ## 每日shares數分析
+分析朱立倫粉絲團每天的shares次數
+```{r}
+SharesCount<-aggregate(shares_count~dateTPE,totalPage,mean)
+library(knitr)
+kable(SharesCount, digits=2)
+```
+
+2016/01/01，新年的第一天，朱立倫跳國旗大力操以及發暖暖包的的影片，得到了1521shares。而在選舉前後得到了較多的shares，其中01/15有最多的shares數，2342，而01/16有1363個shares。在選舉風波後shares數降至85-300。直到02/06台南大地震災情升至1377個shares。而後至04/10的shares數再次降低，約為40-300。
+
+```{r}
+kable(head(SharesCount[order(SharesCount$shares_count,decreasing = T),]))
+```
+
+以上是最多shares數排行
