@@ -96,3 +96,6 @@ kable(head(SharesCount[order(SharesCount$shares_count,decreasing = T),]))
 ```
 
 以上是最多shares數排行
+
+
+## 粉絲留言頻率(加分題)
